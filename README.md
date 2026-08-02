@@ -193,3 +193,15 @@ Update dependencies
 ```bash
 uv sync
 ```
+## Run the Application
+
+```bash
+cd src/fastapi_fullstack_webapp
+uv run fastapi dev main.py
+```
+
+Once the server starts, open:
+
+- http://127.0.0.1:8000
+- http://127.0.0.1:8000/docs
+- http://127.0.0.1:8000/redoc
