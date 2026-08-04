@@ -120,6 +120,13 @@ def get_post(post_id: int):
             return post
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post Not Found")
 
+@app.get("/api/posts/search")
+def search_posts(keyword: str = ""):
+    return [
+        post
+        for post in posts
+        if keyword.lower() in post["title"].lower()
+    ]
 
 @app.exception_handler(StarletteHTTPException)
 def general_http_exception_handler(request: Request, exception: StarletteHTTPException):
