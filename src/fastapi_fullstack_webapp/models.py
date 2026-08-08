@@ -34,7 +34,7 @@ class User(Base):
     # Example:
     # user.posts -> [Post1, Post2, Post3]
     posts: Mapped[list["Post"]] = relationship(
-        back_populates="author"
+        back_populates="author", cascade="all, delete-orphan"
     )
 
     # Computed property (not stored in the database).
