@@ -1,11 +1,12 @@
-from sqlalchemy import create_engine
+# from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 # Database connection URL.
 # sqlite:///./blog.db means:
 # - sqlite://      -> SQLite database
 # - ./blog.db      -> Create or use blog.db in the current project directory
-DATABASE_URL= "sqlite:///./blog.db"
+DATABASE_URL= "sqlit+aiosqlite:///./blog.db"
 
 # Create the SQLAlchemy engine.
 # The engine is responsible for establishing and managing the database connection.
@@ -14,7 +15,7 @@ DATABASE_URL= "sqlite:///./blog.db"
 # SQLite normally allows only the thread that created the connection
 # to use it. Setting this to False allows FastAPI to access the database
 # from multiple threads.
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_async_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 # Create a Session factory.
 #
@@ -31,7 +32,7 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 #
 # bind=engine
 # -> Connect this session to the engine created above.
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
 # Base class for all SQLAlchemy models.
@@ -67,9 +68,9 @@ class Base(DeclarativeBase):
 # This ensures proper database connection management and prevents
 # connection leaks.
 
-def get_db():
-    with SessionLocal() as db:
-        yield db
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
 
 '''
 Request
