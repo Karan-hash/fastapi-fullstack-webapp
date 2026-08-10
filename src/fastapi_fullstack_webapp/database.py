@@ -6,7 +6,7 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 # sqlite:///./blog.db means:
 # - sqlite://      -> SQLite database
 # - ./blog.db      -> Create or use blog.db in the current project directory
-DATABASE_URL= "sqlit+aiosqlite:///./blog.db"
+DATABASE_URL= "sqlite+aiosqlite:///./blog.db"
 
 # Create the SQLAlchemy engine.
 # The engine is responsible for establishing and managing the database connection.
