@@ -21,6 +21,8 @@ class User(Base):
     # Email must be unique and cannot be NULL.
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
 
+    password_hash: Mapped[str]=mapped_column(String(200), nullable=False)
+
     # Optional profile image filename.
     # If no image is uploaded, the value will be NULL.
     image_file: Mapped[str | None] = mapped_column(
