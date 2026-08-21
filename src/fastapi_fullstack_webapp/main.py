@@ -32,6 +32,7 @@ from .schema import (
 
 from .config import settings
 
+from pathlib import Path
 # Base.metadata.create_all(bind=engine)
 
 # Creating life span functions
@@ -48,11 +49,12 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/media", StaticFiles(directory="media"), name="media")
+BASE_DIR = Path(__file__).resolve().parent
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+app.mount("/media", StaticFiles(directory=BASE_DIR / "media"), name="media")
 
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
