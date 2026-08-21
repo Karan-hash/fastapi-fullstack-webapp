@@ -6,11 +6,12 @@ import httpx
 from sqlalchemy import delete, select, update
 
 from . import models
-from .database import AsyncSessionLocal, engine
+from .database import AsyncSessionLocal, Base, engine
 from .image_utils import PROFILE_PICS_DIR
 from .main import app
 
-POPULATE_IMAGES_DIR = Path("populate_images")
+BASE_DIR = Path(__file__).resolve().parent
+POPULATE_IMAGES_DIR = BASE_DIR / "populate_images"
 
 USERS = [
     {
@@ -241,8 +242,11 @@ async def clear_existing_data() -> None:
                 file.unlink()
         print(f"Deleted profile pictures from {PROFILE_PICS_DIR}")
 
-    # Clear database tables (order respects foreign keys)
+    # Clear database tables in dependency order.
+    # Bulk deletes do not trigger ORM relationship cascades, so reset tokens
+    # are removed explicitly before deleting their parent users.
     async with AsyncSessionLocal() as db:
+        await db.execute(delete(models.PasswordResetToken))
         await db.execute(delete(models.Post))
         await db.execute(delete(models.User))
         await db.commit()
@@ -282,6 +286,11 @@ async def update_post_dates() -> None:
 
 
 async def populate() -> None:
+    # populate_db.py runs outside FastAPI's lifespan, so create the tables here
+    # before clearing or inserting seed data.
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     transport = httpx.ASGITransport(app=app)
 
     async with httpx.AsyncClient(
