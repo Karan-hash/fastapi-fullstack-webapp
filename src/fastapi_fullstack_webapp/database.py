@@ -3,18 +3,20 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from pathlib import Path
-BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "blog.db"
 
-DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+from .config import settings
+# BASE_DIR = Path(__file__).resolve().parent
+# DB_PATH = BASE_DIR / "blog.db"
 
-print("DATABASE PATH:", DB_PATH)
+# DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+
+# print("DATABASE PATH:", DB_PATH)
 # Database connection URL.
 # sqlite:///./blog.db means:
 # - sqlite://      -> SQLite database
 # - ./blog.db      -> Create or use blog.db in the current project directory
 # DATABASE_URL= "sqlite+aiosqlite:///./blog.db"
-DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+# DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 
 # Create the SQLAlchemy engine.
 # The engine is responsible for establishing and managing the database connection.
@@ -24,7 +26,7 @@ DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 # to use it. Setting this to False allows FastAPI to access the database
 # from multiple threads.
 
-engine = create_async_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_async_engine(settings.database_url)
 
 # Create a Session factory.
 #
