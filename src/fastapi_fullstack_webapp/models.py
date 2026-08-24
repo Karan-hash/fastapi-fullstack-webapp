@@ -74,6 +74,8 @@ class Post(Base):
         index=True,
     )
 
+    likes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
     # Automatically stores the current UTC time
     # when a new post is created.
     date_posted: Mapped[datetime] = mapped_column(
