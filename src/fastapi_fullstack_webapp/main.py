@@ -21,7 +21,7 @@ from sqlalchemy.orm import selectinload
 from .routers import posts, users
 
 from . import models
-from .database import Base, engine, get_db
+from .database import engine, get_db
 from .schema import (
     PostCreate,
     PostResponse,
@@ -37,14 +37,20 @@ from pathlib import Path
 
 # Creating life span functions
 
+# @asynccontextmanager
+# async def lifespan(_app: FastAPI):
+#     # Startup
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.create_all)
+#     yield
+
+#     #shutdown
+#     await engine.dispose()
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Startup
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield
-
-    #shutdown
+    # Shutdown
     await engine.dispose()
 
 app = FastAPI(lifespan=lifespan)

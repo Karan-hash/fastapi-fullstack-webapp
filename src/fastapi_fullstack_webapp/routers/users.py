@@ -227,7 +227,7 @@ async def reset_password(
         )
 
     # Check whether the reset token has expired
-    if reset_token.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
+    if reset_token.expires_at < datetime.now(UTC):
 
         # Remove the expired token from the database
         await db.delete(reset_token)
