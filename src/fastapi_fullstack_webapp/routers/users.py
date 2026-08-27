@@ -567,7 +567,7 @@ async def upload_profile_picture(
 
     # Delete the previous profile picture after the new one is successfully saved
     if old_filename:
-        delete_profile_image(old_filename)
+        await delete_profile_image(old_filename)
 
     # Return the updated authenticated user
     return current_user
