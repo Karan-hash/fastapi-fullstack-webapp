@@ -2,14 +2,11 @@ import uuid
 from io import BytesIO
 
 import boto3
+from PIL import Image, ImageOps
 from starlette.concurrency import run_in_threadpool
+
 from .config import settings
 
-from PIL import Image, ImageOps
-
-
-# # Directory where processed profile pictures will be stored
-# PROFILE_PICS_DIR = Path("media/profile_pics")
 
 def _get_s3_client():
     return boto3.client(
