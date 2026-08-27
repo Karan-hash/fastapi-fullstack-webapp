@@ -603,7 +603,7 @@ async def delete_user_picture(
     await db.refresh(current_user)
 
     # Delete the actual image file from storage
-    delete_profile_image(old_filename)
+    await delete_profile_image(old_filename)
 
     # Return the updated user
     return current_user
