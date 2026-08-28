@@ -1,18 +1,35 @@
 import uuid
 from io import BytesIO
-from pathlib import Path
 
+import boto3
 from PIL import Image, ImageOps
+from starlette.concurrency import run_in_threadpool
+
+from .config import settings
 
 
-# Directory where processed profile pictures will be stored
-PROFILE_PICS_DIR = Path("media/profile_pics")
+def _get_s3_client():
+    return boto3.client(
+        "s3",
+        region_name=settings.s3_region,
+        aws_access_key_id=(
+            settings.s3_access_key_id.get_secret_value()
+            if settings.s3_access_key_id
+            else None
+        ),
+        aws_secret_access_key=(
+            settings.s3_secret_access_key.get_secret_value()
+            if settings.s3_secret_access_key
+            else None
+        ),
+        endpoint_url=settings.s3_endpoint_url,
+    )
 
 
 # Image processing with Pillow is CPU-bound work,
 # so this function should be executed in a thread pool
 # when called from an async FastAPI endpoint.
-def process_profile_image(content: bytes) -> str:
+def process_profile_image(content: bytes) -> tuple[bytes, str]:
     """Process and save a profile image, returning the generated filename."""
 
     # Open the image directly from the uploaded byte content
@@ -37,34 +54,34 @@ def process_profile_image(content: bytes) -> str:
         # Generate a unique filename to prevent filename collisions
         filename = f"{uuid.uuid4().hex}.jpg"
 
-        # Build the complete path where the image will be saved
-        filepath = PROFILE_PICS_DIR / filename
-
-        # Create the profile pictures directory if it does not already exist
-        PROFILE_PICS_DIR.mkdir(parents=True, exist_ok=True)
+        output=BytesIO()
 
         # Save the processed image as an optimized JPEG
-        img.save(
-            filepath,
-            "JPEG",
-            quality=85,
-            optimize=True,
-        )
+        img.save(output, "JPEG", quality=85, optimize=True)
+        output.seek(0)
 
-    # Store this filename in the user's database record
-    return filename
+    return output.read(), filename
+
+def _upload_to_s3(file_bytes: bytes, key: str) -> None:
+    s3 = _get_s3_client()
+    s3.upload_fileobj(
+        BytesIO(file_bytes),
+        settings.s3_bucket_name,
+        key,
+        ExtraArgs={"ContentType": "image/jpeg"},
+    )
+def _delete_from_s3(key: str) -> None:
+    s3 = _get_s3_client()
+    s3.delete_object(Bucket=settings.s3_bucket_name, Key=key)
 
 
-def delete_profile_image(filename: str | None) -> None:
-    """Delete an existing profile image from storage."""
+async def upload_profile_image(file_bytes: bytes, filename: str) -> None:
+    key = f"profile_pics/{filename}"
+    await run_in_threadpool(_upload_to_s3, file_bytes, key)
 
-    # Nothing to delete if the user does not have a profile image
+
+async def delete_profile_image(filename: str | None) -> None:
     if filename is None:
         return
-
-    # Build the complete path of the existing profile image
-    filepath = PROFILE_PICS_DIR / filename
-
-    # Delete the file only if it exists
-    if filepath.exists():
-        filepath.unlink()
+    key = f"profile_pics/{filename}"
+    await run_in_threadpool(_delete_from_s3, key)

@@ -24,6 +24,12 @@ async def get_posts(db: Annotated[AsyncSession, Depends(get_db)], skip: Annotate
     )
     posts = result.scalars().all()
 
+    for post in posts:
+        print("USERNAME:", post.author.username)
+        print("IMAGE FILE:", post.author.image_file)
+        print("IMAGE PATH:", post.author.image_path)
+        print("-------------------")
+
     has_more = skip + len(posts) < total
 
 

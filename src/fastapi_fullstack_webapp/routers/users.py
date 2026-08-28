@@ -6,12 +6,13 @@ from sqlalchemy import delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from botocore.exceptions import ClientError
 from fastapi.security import OAuth2PasswordRequestForm
 
 from PIL import UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
 
-from ..image_utils import delete_profile_image, process_profile_image
+from ..image_utils import delete_profile_image, process_profile_image, upload_profile_image
 
 from .. import models
 from ..database import get_db
@@ -449,7 +450,7 @@ async def delete_user(
     
     # Also delete the image of the user
     if old_filename:
-        delete_profile_image(old_filename)
+        await delete_profile_image(old_filename)
 
     
 
@@ -536,7 +537,7 @@ async def upload_profile_picture(
     try:
         # Pillow image processing is CPU-bound, so run it in a thread pool
         # to avoid blocking FastAPI's async event loop
-        new_filename = await run_in_threadpool(
+        processed_bytes, new_filename = await run_in_threadpool(
             process_profile_image,
             content,
         )
@@ -548,6 +549,14 @@ async def upload_profile_picture(
                    "(JPEG, PNG, GIF, WebP).",
         ) from err
 
+    # Upload to S3 (also runs in threadpool via async wrapper)
+    try:
+        await upload_profile_image(processed_bytes, new_filename)
+    except ClientError as err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload image. Please try again.",
+        ) from err
     # Keep the old filename so it can be removed after the DB update succeeds
     old_filename = current_user.image_file
 
@@ -558,7 +567,7 @@ async def upload_profile_picture(
 
     # Delete the previous profile picture after the new one is successfully saved
     if old_filename:
-        delete_profile_image(old_filename)
+        await delete_profile_image(old_filename)
 
     # Return the updated authenticated user
     return current_user
@@ -594,7 +603,7 @@ async def delete_user_picture(
     await db.refresh(current_user)
 
     # Delete the actual image file from storage
-    delete_profile_image(old_filename)
+    await delete_profile_image(old_filename)
 
     # Return the updated user
     return current_user

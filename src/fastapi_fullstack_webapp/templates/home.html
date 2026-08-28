@@ -76,14 +76,11 @@
     try {
       const response = await fetch(`/api/posts?skip=${currentOffset}&limit=${limit}`);
 
-      console.log('status:', response.status);
       if (!response.ok) {
         throw new Error('Failed to fetch posts');
       }
 
       const data = await response.json();
-
-      console.log('API response:', data);
 
       // Append new posts to the container
       for (const post of data.posts) {
