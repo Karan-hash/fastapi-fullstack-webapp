@@ -6,6 +6,7 @@ from tests.conftest import auth_header, create_test_user, login_user
 
 @pytest.mark.anyio
 async def test_get_posts_empty(client: AsyncClient):
+    """Verify an empty paginated response is returned when no posts exist."""
     response = await client.get("/api/posts")
 
     assert response.status_code == 200
@@ -17,6 +18,7 @@ async def test_get_posts_empty(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_get_post_not_found(client: AsyncClient):
+    """Verify requesting a non-existent post returns a 404 response."""
     response = await client.get("/api/posts/999")
 
     assert response.status_code == 404
@@ -25,6 +27,7 @@ async def test_get_post_not_found(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_create_post_success(client: AsyncClient):
+    """Verify an authenticated user can successfully create a post."""
     user = await create_test_user(client)
     token = await login_user(client)
     headers = auth_header(token)
@@ -37,6 +40,8 @@ async def test_create_post_success(client: AsyncClient):
 
     assert response.status_code == 201
     data = response.json()
+
+    # Verify the post content and author information are returned correctly.
     assert data["title"] == "My First Post"
     assert data["content"] == "This is the content"
     assert data["user_id"] == user["id"]
@@ -47,6 +52,7 @@ async def test_create_post_success(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_create_post_unauthorized(client: AsyncClient):
+    """Verify an unauthenticated user cannot create a post."""
     response = await client.post(
         "/api/posts",
         json={"title": "Test Post", "content": "Test content"},
@@ -58,10 +64,12 @@ async def test_create_post_unauthorized(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_update_post_success(client: AsyncClient):
+    """Verify a post owner can update their post."""
     await create_test_user(client)
     token = await login_user(client)
     headers = auth_header(token)
 
+    # Create a post that will be updated.
     response = await client.post(
         "/api/posts",
         json={"title": "Original Title", "content": "Original content"},
@@ -69,6 +77,7 @@ async def test_update_post_success(client: AsyncClient):
     )
     post_id = response.json()["id"]
 
+    # Update only the title to verify partial updates are supported.
     response = await client.patch(
         f"/api/posts/{post_id}",
         json={"title": "Updated Title"},
@@ -83,9 +92,11 @@ async def test_update_post_success(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_update_post_wrong_user(client: AsyncClient):
+    """Verify a user cannot update a post owned by another user."""
     await create_test_user(client, username="user1", email="user1@example.com")
     token1 = await login_user(client, email="user1@example.com")
 
+    # Create a post owned by the first user.
     response = await client.post(
         "/api/posts",
         json={"title": "User 1's Post", "content": "Only user 1 can edit this"},
@@ -93,6 +104,7 @@ async def test_update_post_wrong_user(client: AsyncClient):
     )
     post_id = response.json()["id"]
 
+    # Authenticate as a different user and attempt to update the post.
     await create_test_user(client, username="user2", email="user2@example.com")
     token2 = await login_user(client, email="user2@example.com")
 
@@ -108,10 +120,12 @@ async def test_update_post_wrong_user(client: AsyncClient):
 
 @pytest.mark.anyio
 async def test_get_posts_with_pagination(client: AsyncClient):
+    """Verify posts are returned correctly with skip and limit pagination."""
     await create_test_user(client)
     token = await login_user(client)
     headers = auth_header(token)
 
+    # Create enough posts to exercise different pagination scenarios.
     for i in range(5):
         response = await client.post(
             "/api/posts",
@@ -120,6 +134,7 @@ async def test_get_posts_with_pagination(client: AsyncClient):
         )
         assert response.status_code == 201
 
+    # Verify the default response returns all available test posts.
     response = await client.get("/api/posts")
     assert response.status_code == 200
     data = response.json()
@@ -127,6 +142,7 @@ async def test_get_posts_with_pagination(client: AsyncClient):
     assert len(data["posts"]) == 5
     assert data["has_more"] is False
 
+    # Verify limiting results indicates that additional posts are available.
     response = await client.get("/api/posts?limit=2")
     assert response.status_code == 200
     data = response.json()
@@ -134,6 +150,7 @@ async def test_get_posts_with_pagination(client: AsyncClient):
     assert len(data["posts"]) == 2
     assert data["has_more"] is True
 
+    # Verify skip and limit values are applied and returned correctly.
     response = await client.get("/api/posts?skip=2&limit=2")
     assert response.status_code == 200
     data = response.json()
